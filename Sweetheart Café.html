@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sweetheart's Café 💖</title>
+<style>
+:root{
+  --pink:#ffd6e7;
+  --accent:#ff6fa5;
+  --accent-2:#ff94bb;
+  --card:#fff;
+  --shadow:0 10px 24px rgba(0,0,0,.08);
+  --radius:20px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:sans-serif;background:linear-gradient(180deg,var(--pink),#fff);}
+.wrap{max-width:900px;margin:16px auto;padding:16px;}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.title{font-weight:900;font-size:28px;display:flex;align-items:center;gap:10px;}
+.hud{display:flex;gap:10px;align-items:center;}
+.pill{background:var(--card);border-radius:999px;padding:10px 14px;box-shadow:var(--shadow);display:flex;gap:8px;align-items:center;}
+.meter{position:relative;height:16px;width:200px;background:#ffe6f0;border-radius:999px;overflow:hidden;}
+.meter>div{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .2s ease-out;}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.stage{display:grid;gap:14px;}
+.customer{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 12px 16px;min-height:220px;border:2px dashed #ffd1e6;border-radius:var(--radius);}
+.face{font-size:64px;}
+.wants{font-weight:800;font-size:22px;}
+.options{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.btn{border:0;border-radius:16px;padding:14px;box-shadow:var(--shadow);cursor:pointer;font-weight:900;background:linear-gradient(180deg,#fff,#ffe9f3);display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:18px;}
+.btn:active{transform:scale(.98);}
+.emoji{font-size:32px;}
+.keys{display:flex;gap:6px;align-items:center;font-size:12px;opacity:.8;}
+kbd{background:#f1f1f4;border-radius:6px;padding:4px 6px;}
+.overlay{position:fixed;inset:0;background:rgba(255,214,231,.8);display:none;align-items:center;justify-content:center;padding:16px;}
+.overlay.show{display:flex;}
+.modal{background:var(--card);border-radius:24px;padding:24px;text-align:center;box-shadow:var(--shadow);}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;}
+.ghost{background:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">Sweetheart's Café 💖</div>
+    <div class="hud">
+      <div class="pill">⏱ <span id="time">60</span>s</div>
+      <div class="pill">💕 <div class="meter"><div id="meterFill"></div></div> <span id="score">0</span></div>
+      <!-- Music toggle button -->
+      <button id="musicToggle" class="pill">🔊</button>
+    </div>
+  </header>
+  <main class="stage card">
+    <section class="customer">
+      <div id="face" class="face">😊</div>
+      <div class="wants">Wants: <span id="want">🍓</span></div>
+    </section>
+    <section class="options">
+      <button class="btn" data-food="🍓"><span class="emoji">🍓</span> Strawberry <span class="keys"><kbd>1</kbd></span></button>
+      <button class="btn" data-food="🍪"><span class="emoji">🍪</span> Cookie <span class="keys"><kbd>2</kbd></span></button>
+      <button class="btn" data-food="🍰"><span class="emoji">🍰</span> Cake <span class="keys"><kbd>3</kbd></span></button>
+    </section>
+  </main>
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <h2>Time's Up! 💕</h2>
+    <p>Your score: <strong id="finalScore">0</strong></p>
+    <div class="row">
+      <button id="playAgain" class="btn primary">Play Again</button>
+      <button id="closeGame" class="btn ghost">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Background music -->
+<audio id="bgm" loop>
+  <source src="beans [LwUL3T8Zylk].mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const faces=["😊","😺","🐰","🐶","🦊","🐼"];
+const foods=["🍓","🍪","🍰"];
+let score=0,timeLeft=60,wanted=foods[0],timerId=null;
+
+const faceEl=document.getElementById("face");
+const wantEl=document.getElementById("want");
+const timeEl=document.getElementById("time");
+const scoreEl=document.getElementById("score");
+const meterEl=document.getElementById("meterFill");
+const overlay=document.getElementById("overlay");
+const finalScoreEl=document.getElementById("finalScore");
+const playAgainBtn=document.getElementById("playAgain");
+const closeGameBtn=document.getElementById("closeGame");
+const bgm=document.getElementById("bgm");
+const musicToggle=document.getElementById("musicToggle");
+
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+function setOrder(){
+  faceEl.textContent=rand(faces);
+  wanted=rand(foods);
+  wantEl.textContent=wanted;
+}
+
+function updateHUD(){
+  timeEl.textContent=timeLeft;
+  scoreEl.textContent=score;
+  meterEl.style.width=Math.min(100,Math.round(score/20*100))+"%";
+}
+
+function tick(){
+  timeLeft--;
+  updateHUD();
+  if(timeLeft<=0)endGame();
+}
+
+function startGame(){
+  score=0;
+  timeLeft=60;
+  setOrder();
+  updateHUD();
+  clearInterval(timerId);
+  timerId=setInterval(tick,1000);
+
+  // Play music when game starts
+  if (bgm.paused) {
+    bgm.currentTime=0;
+    bgm.play().catch(()=>{});
+  }
+}
+
+function endGame(){
+  clearInterval(timerId);
+  finalScoreEl.textContent=score;
+  overlay.classList.add("show");
+}
+
+function serve(food){
+  if(food===wanted)score++;
+  setOrder();
+  updateHUD();
+}
+
+document.querySelectorAll(".btn").forEach(b=>
+  b.addEventListener("click",()=>serve(b.dataset.food))
+);
+
+window.addEventListener("keydown",(e)=>{
+  if(e.code==="Digit1"||e.code==="Numpad1")serve("🍓");
+  if(e.code==="Digit2"||e.code==="Numpad2")serve("🍪");
+  if(e.code==="Digit3"||e.code==="Numpad3")serve("🍰");
+});
+
+playAgainBtn.addEventListener("click",()=>{
+  overlay.classList.remove("show");
+  startGame();
+});
+
+closeGameBtn.addEventListener("click",()=>{
+  overlay.classList.remove("show");
+  bgm.pause();
+});
+
+// Music toggle button
+musicToggle.addEventListener("click",()=>{
+  if(bgm.paused){
+    bgm.play().catch(()=>{});
+    musicToggle.textContent="🔊";
+  } else {
+    bgm.pause();
+    musicToggle.textContent="🔇";
+  }
+});
+
+// First interaction unlocks audio (required by browsers)
+document.addEventListener("click", ()=> {
+  if (bgm.paused) bgm.play().catch(()=>{});
+}, { once:true });
+
+document.addEventListener("keydown", ()=> {
+  if (bgm.paused) bgm.play().catch(()=>{});
+}, { once:true });
+
+startGame();
+</script>
+</body>
+</html>
